@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	
+  <PropertyGroup>
+    <TargetFrameworks>net7.0</TargetFrameworks>
+    <Version>1.0</Version>
+    <Title>NTNU_FirstPlugin</Title>
+    <Description>Description of NTNU_FirstPlugin</Description>
+    <TargetExt>.gha</TargetExt>
+    <BaseOutputPath>C:\Users\marcinl\AppData\Roaming\Grasshopper\Libraries</BaseOutputPath>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Grasshopper" Version="8.0.23164.14305-wip" IncludeAssets="compile;build" />
+  </ItemGroup>
+
+</Project>
