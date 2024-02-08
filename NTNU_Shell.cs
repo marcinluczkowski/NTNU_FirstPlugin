@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Eto.Forms;
+using Grasshopper;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 
@@ -23,9 +24,12 @@ namespace NTNU_FirstPlugin
         /// </summary>
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            pManager.AddNumberParameter("z1","","height of the surface at first curve",GH_ParamAccess.item); //0
-            pManager.AddNumberParameter("z2", "", "height of the surface at second curve", GH_ParamAccess.item); //1
-            pManager.AddNumberParameter("z3", "", "height of the surface at third curve", GH_ParamAccess.item); //2
+            pManager.AddNumberParameter("z1","","height of the surface at first curve",GH_ParamAccess.item, 5); //0
+            pManager.AddNumberParameter("z2", "", "height of the surface at second curve", GH_ParamAccess.item, 5); //1
+            pManager.AddNumberParameter("z3", "", "height of the surface at third curve", GH_ParamAccess.item , 5 ); //2
+            pManager.AddIntegerParameter("udiv","u","number of divisions in u (0) direction",GH_ParamAccess.item,10);
+            pManager.AddIntegerParameter("vidv", "v", "number of divisions in v (1) direction", GH_ParamAccess.item, 10);
+            pManager.AddIntegerParameter("type", "t", "type of bracing 0- left , 1 -right, 2 - cross bracing, 3 - none", GH_ParamAccess.item, 3);
         }
 
         /// <summary>
@@ -35,7 +39,7 @@ namespace NTNU_FirstPlugin
         {
             pManager.AddBrepParameter("Shell","s","surface from 3 curves",GH_ParamAccess.item);
             pManager.AddGenericParameter("Gridshell","gs","gridshell class object", GH_ParamAccess.item);
-            pManager.AddPointParameter("nodes","","", GH_ParamAccess.list);
+            pManager.AddPointParameter("nodes","","", GH_ParamAccess.tree);
         }
 
         /// <summary>
@@ -47,9 +51,16 @@ namespace NTNU_FirstPlugin
             double z1 = 0;
             double z2 = 0;
             double z3 = 0;
+            int udiv = 10;
+            int vdiv = 10;
+            int type = 3;
+
             DA.GetData(0, ref z1);
             DA.GetData(1, ref z2);
             DA.GetData(2, ref z3);
+            DA.GetData(3, ref udiv);
+            DA.GetData(4, ref vdiv);
+            DA.GetData(5, ref type);
 
             Brep shell = new Brep();
             //this is the place for your code
@@ -86,30 +97,44 @@ namespace NTNU_FirstPlugin
             Surface srf = shell.Faces[0];
             Interval i0 = srf.Domain(0);
             Interval i1 = srf.Domain(1);
+            
+            double udivD = Convert.ToDouble(udiv);
+            double vdivD = Convert.ToDouble(vdiv);
 
-            double step0 = 1.0 / 10.0;
-            double step1 = 1.0 / 10.0;
+            double step0 = 1.0 / udivD;
+            double step1 = 1.0 / vdivD;
 
             List<List<Point3d>> nodes = new List<List<Point3d>>();
-
-            for (int i = 0; i < 10+1; i++)
+            DataTree<Point3d> treeNodes = new DataTree<Point3d>();
+            for (int i = 0; i < udiv+1; i++)
             {
                 List<Point3d> nodesInRow = new List<Point3d>();
-                for (int j = 0; j < 10+1; j++)
+                for (int j = 0; j < vdiv+1; j++)
                 {
                     double u = i0.ParameterAt(step0 * i);
                     double v = i1.ParameterAt(step1 * j);
                     Point3d node = srf.PointAt(u, v);
                     nodesInRow.Add(node);
+                    treeNodes.Add(node, new Grasshopper.Kernel.Data.GH_Path(i));
                 }
                 nodes.Add(nodesInRow);
             }
+
+            List<Point3d> sups = new List<Point3d>();
+            for (int i = 0; i < udiv+1; i++)
+            {
+                sups.Add(nodes[i][0]);
+                sups.Add(nodes[i][vdiv]);
+            }
+            
+            gs.supports = sups;
+
             List<Beam> beams = new List<Beam>();
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < udiv; i++)
             {
                 List<Point3d> nodes1 = nodes[i];
                 List<Point3d> nodes2 = nodes[i+1];
-                for (int j = 0; j < nodes1.Count; j++)
+                for (int j = 0; j < vdiv+1; j++)
                 {
                     Line axis = new Line(nodes1[j], nodes2[j]);
                     Beam beam = new Beam();
@@ -121,10 +146,10 @@ namespace NTNU_FirstPlugin
                 }
             }
 
-            for (int i = 0; i < 10+1; i++)
+            for (int i = 0; i < udiv+1; i++)
             {
                 List<Point3d> nodes1 = nodes[i];
-                for (int j = 0; j < nodes1.Count-1; j++)
+                for (int j = 0; j < vdiv; j++)
                 {
                     Line axis = new Line(nodes1[j], nodes1[j+1]);
                     Beam beam = new Beam();
@@ -136,28 +161,108 @@ namespace NTNU_FirstPlugin
                 }
             }
 
+            if (type == 0)
+            { 
+            
+            }
+            else if (type == 1) 
+            {
+                //left bars
+                List<Bar> bars = new List<Bar>();
+                for (int i = 0; i < udiv; i++)
+                {
+                    List<Point3d> nodes1 = nodes[i];
+                    List<Point3d> nodes2 = nodes[i + 1];
+                    for (int j = 0; j < vdiv; j++)
+                    {
+                        Line axis = new Line(nodes1[j], nodes2[j + 1]);
+                        Bar bar = new Bar();
+                        bar.name = "bars type1";
+                        bar.section = "IPE100";
+                        bar.material = "S355";
+                        bar.axis = axis;
+                        bars.Add(bar);
+                    }
+                }
+
+                gs.bars = bars;
+            }
+            else if (type == 2)
+            {
+                //right bars
+                List<Bar> bars = new List<Bar>();
+                for (int i = 0; i < udiv; i++)
+                {
+                    List<Point3d> nodes1 = nodes[i];
+                    List<Point3d> nodes2 = nodes[i + 1];
+                    for (int j = 0; j < vdiv; j++)
+                    {
+                        Line axis = new Line(nodes1[j+1], nodes2[j]);
+                        Bar bar = new Bar();
+                        bar.name = "bars type2";
+                        bar.section = "IPE100";
+                        bar.material = "S355";
+                        bar.axis = axis;
+                        bars.Add(bar);
+                    }
+                }
+
+                gs.bars = bars;
+            }
+            else if (type == 3)
+            {
+                //double bracing
+                List<Bar> bars = new List<Bar>();
+                for (int i = 0; i < udiv; i++)
+                {
+                    List<Point3d> nodes1 = nodes[i];
+                    List<Point3d> nodes2 = nodes[i + 1];
+                    for (int j = 0; j < vdiv; j++)
+                    {
+                        Line axis1 = new Line(nodes1[j], nodes2[j + 1]);
+                        Bar bar1 = new Bar();
+                        bar1.name = "bars type1";
+                        bar1.section = "IPE100";
+                        bar1.material = "S355";
+                        bar1.axis = axis1;
+                        bars.Add(bar1);
+                        Line axis2 = new Line(nodes1[j+1], nodes2[j ]);
+                        Bar bar2 = new Bar();
+                        bar2.name = "bars type2";
+                        bar2.section = "IPE100";
+                        bar2.material = "S355";
+                        bar2.axis = axis2;
+                        bars.Add(bar2);
+                    }
+                }
+
+                gs.bars = bars;
+            }
+            /*
             List<Bar> bars = new List<Bar>();
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < udiv; i++)
             {
                 List<Point3d> nodes1 = nodes[i];
                 List<Point3d> nodes2 = nodes[i + 1];
-                for (int j = 0; j < nodes1.Count-1; j++)
+                for (int j = 0; j < vdiv; j++)
                 {
                     Line axis = new Line(nodes1[j], nodes2[j+1]);
                     Bar bar = new Bar();
-                    bar.name = "beam in first direction";
+                    bar.name = "bars type1";
                     bar.section = "IPE100";
                     bar.material = "S355";
                     bar.axis = axis;
                     bars.Add(bar);
                 }
             }
+            
             gs.bars = bars;
+            */
             gs.beams = beams;
             //it should be finished with shell
             DA.SetData(0, shell);
             DA.SetData(1, gs);
-            DA.SetDataList(2, nodes[2]);
+            DA.SetDataTree(2, treeNodes);
         }
 
         /// <summary>
