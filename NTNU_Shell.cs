@@ -120,6 +120,39 @@ namespace NTNU_FirstPlugin
                     beams.Add(beam);
                 }
             }
+
+            for (int i = 0; i < 10+1; i++)
+            {
+                List<Point3d> nodes1 = nodes[i];
+                for (int j = 0; j < nodes1.Count-1; j++)
+                {
+                    Line axis = new Line(nodes1[j], nodes1[j+1]);
+                    Beam beam = new Beam();
+                    beam.name = "beam in second direction";
+                    beam.section = "IPE100";
+                    beam.material = "S355";
+                    beam.axis = axis;
+                    beams.Add(beam);
+                }
+            }
+
+            List<Bar> bars = new List<Bar>();
+            for (int i = 0; i < 10; i++)
+            {
+                List<Point3d> nodes1 = nodes[i];
+                List<Point3d> nodes2 = nodes[i + 1];
+                for (int j = 0; j < nodes1.Count-1; j++)
+                {
+                    Line axis = new Line(nodes1[j], nodes2[j+1]);
+                    Bar bar = new Bar();
+                    bar.name = "beam in first direction";
+                    bar.section = "IPE100";
+                    bar.material = "S355";
+                    bar.axis = axis;
+                    bars.Add(bar);
+                }
+            }
+            gs.bars = bars;
             gs.beams = beams;
             //it should be finished with shell
             DA.SetData(0, shell);
