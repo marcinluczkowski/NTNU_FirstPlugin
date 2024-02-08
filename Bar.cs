@@ -15,5 +15,17 @@ namespace NTNU_FirstPlugin
         public Line axis;
 
 
+        public Bar(string name, string section, string material, Line axis)
+        {
+            this.name = name;
+            this.section = section;
+            this.material = material;
+            this.axis = axis;
+        }
+
+        public Bar()
+        { 
+            //empty constructor
+        }
     }
 }

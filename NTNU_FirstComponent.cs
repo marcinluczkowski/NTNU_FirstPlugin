@@ -60,6 +60,10 @@ namespace NTNU_FirstPlugin
 
             DA.SetData(0, newText);
             DA.SetData(1, something);
+
+
+
+
         }
 
         

@@ -5,6 +5,10 @@ using Grasshopper;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
+using static Rhino.Render.TextureGraphInfo;
+
 namespace NTNU_FirstPlugin
 {
     public class NTNU_Shell : GH_Component
@@ -30,6 +34,7 @@ namespace NTNU_FirstPlugin
             pManager.AddIntegerParameter("udiv","u","number of divisions in u (0) direction",GH_ParamAccess.item,10);
             pManager.AddIntegerParameter("vidv", "v", "number of divisions in v (1) direction", GH_ParamAccess.item, 10);
             pManager.AddIntegerParameter("type", "t", "type of bracing 0- left , 1 -right, 2 - cross bracing, 3 - none", GH_ParamAccess.item, 3);
+            pManager.AddTextParameter("Beams","bs","beams names ",GH_ParamAccess.list, new List<string>(){"100X100","100X200" });
         }
 
         /// <summary>
@@ -54,13 +59,14 @@ namespace NTNU_FirstPlugin
             int udiv = 10;
             int vdiv = 10;
             int type = 3;
-
+            List<string> sections = new List<string>();
             DA.GetData(0, ref z1);
             DA.GetData(1, ref z2);
             DA.GetData(2, ref z3);
             DA.GetData(3, ref udiv);
             DA.GetData(4, ref vdiv);
             DA.GetData(5, ref type);
+            DA.GetDataList(6, sections);
 
             Brep shell = new Brep();
             //this is the place for your code
@@ -137,11 +143,8 @@ namespace NTNU_FirstPlugin
                 for (int j = 0; j < vdiv+1; j++)
                 {
                     Line axis = new Line(nodes1[j], nodes2[j]);
-                    Beam beam = new Beam();
-                    beam.name = "beam in first direction";
-                    beam.section = "IPE100";
-                    beam.material = "S355";
-                    beam.axis = axis;
+                    Beam beam = new Beam("beam in first direction", sections[0],"S355",axis);
+                    double double_area =beam.area(100,20);
                     beams.Add(beam);
                 }
             }
@@ -154,7 +157,7 @@ namespace NTNU_FirstPlugin
                     Line axis = new Line(nodes1[j], nodes1[j+1]);
                     Beam beam = new Beam();
                     beam.name = "beam in second direction";
-                    beam.section = "IPE100";
+                    beam.section = sections[1];
                     beam.material = "S355";
                     beam.axis = axis;
                     beams.Add(beam);
@@ -176,11 +179,7 @@ namespace NTNU_FirstPlugin
                     for (int j = 0; j < vdiv; j++)
                     {
                         Line axis = new Line(nodes1[j], nodes2[j + 1]);
-                        Bar bar = new Bar();
-                        bar.name = "bars type1";
-                        bar.section = "IPE100";
-                        bar.material = "S355";
-                        bar.axis = axis;
+                        Bar bar = new Bar("bars type1", "IPE100","S355",axis);
                         bars.Add(bar);
                     }
                 }
@@ -198,11 +197,7 @@ namespace NTNU_FirstPlugin
                     for (int j = 0; j < vdiv; j++)
                     {
                         Line axis = new Line(nodes1[j+1], nodes2[j]);
-                        Bar bar = new Bar();
-                        bar.name = "bars type2";
-                        bar.section = "IPE100";
-                        bar.material = "S355";
-                        bar.axis = axis;
+                        Bar bar = new Bar("bars type2", "IPE100", "S355", axis);
                         bars.Add(bar);
                     }
                 }
@@ -220,18 +215,12 @@ namespace NTNU_FirstPlugin
                     for (int j = 0; j < vdiv; j++)
                     {
                         Line axis1 = new Line(nodes1[j], nodes2[j + 1]);
-                        Bar bar1 = new Bar();
-                        bar1.name = "bars type1";
-                        bar1.section = "IPE100";
-                        bar1.material = "S355";
-                        bar1.axis = axis1;
+                        Bar bar1 = new Bar("bars type1", "IPE100", "S355", axis1);
+                        
                         bars.Add(bar1);
                         Line axis2 = new Line(nodes1[j+1], nodes2[j ]);
-                        Bar bar2 = new Bar();
-                        bar2.name = "bars type2";
-                        bar2.section = "IPE100";
-                        bar2.material = "S355";
-                        bar2.axis = axis2;
+                        Bar bar2 = new Bar("bars type2", "IPE100", "S355", axis2);
+
                         bars.Add(bar2);
                     }
                 }
